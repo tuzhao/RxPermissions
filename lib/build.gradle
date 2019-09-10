@@ -5,8 +5,8 @@ ext {
     bintrayName = 'permission'
 
     publishedGroupId = 'org.tuzhao.permission'
-    libraryName = 'permission'
-    artifact = 'permission'
+    libraryName = 'lib'
+    artifact = 'lib'
 
     libraryDescription = 'Permission Libray For Android'
 
