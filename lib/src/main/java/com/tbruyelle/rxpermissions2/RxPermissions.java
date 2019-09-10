@@ -22,7 +22,9 @@ import android.support.annotation.VisibleForTesting;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
 import android.text.TextUtils;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,7 +35,9 @@ import io.reactivex.ObservableTransformer;
 import io.reactivex.functions.Function;
 import io.reactivex.subjects.PublishSubject;
 
-public class RxPermissions {
+public final class RxPermissions {
+
+    private static boolean isDebug = false;//是否开启log输出
 
     static final String TAG = RxPermissions.class.getSimpleName();
     static final Object TRIGGER = new Object();
@@ -57,18 +61,55 @@ public class RxPermissions {
 
             @Override
             public synchronized RxPermissionsFragment get() {
+                log("getLazySingleton() get()");
+                if (null != rxPermissionsFragment) {
+                    FragmentActivity activity = rxPermissionsFragment.getActivity();
+                    if (null == activity) {
+                        logW("out fragment host is null,we will remove fragment.");
+                        try {
+                            FragmentTransaction transaction = fragmentManager.beginTransaction();
+                            transaction.remove(rxPermissionsFragment);
+                            transaction.commitNow();
+                        } catch (Exception e) {
+                            Log.w(TAG, "out remove destroyed fragment error", e);
+                        }
+                        rxPermissionsFragment = null;
+                    } else {
+                        log("out fragment host is normal. (" + activity.getClass().getSimpleName() + ")");
+                    }
+                }
                 if (rxPermissionsFragment == null) {
                     rxPermissionsFragment = getRxPermissionsFragment(fragmentManager);
                 }
                 return rxPermissionsFragment;
             }
-
         };
     }
 
     private RxPermissionsFragment getRxPermissionsFragment(@NonNull final FragmentManager fragmentManager) {
+        log("getRxPermissionsFragment()");
         RxPermissionsFragment rxPermissionsFragment = findRxPermissionsFragment(fragmentManager);
-        boolean isNewInstance = rxPermissionsFragment == null;
+        boolean isExist = (rxPermissionsFragment != null);
+        log("find fragment from memory cache. " + isExist);
+        if (isExist) {
+            FragmentActivity activity = rxPermissionsFragment.getActivity();
+            if (null == activity) {
+                logW("fragment host is null,we will remove fragment.");
+                try {
+                    FragmentTransaction transaction = fragmentManager.beginTransaction();
+                    transaction.remove(rxPermissionsFragment);
+                    transaction.commitNow();
+                } catch (Exception e) {
+                    Log.w(TAG, "remove destroyed fragment error", e);
+                }
+                rxPermissionsFragment = null;
+            } else {
+                log("fragment host is normal. (" + activity.getClass().getSimpleName() + ")");
+            }
+        }
+
+        boolean isNewInstance = (rxPermissionsFragment == null);
+        log("is need create new instance? " + isNewInstance);
         if (isNewInstance) {
             rxPermissionsFragment = new RxPermissionsFragment();
             fragmentManager
@@ -84,6 +125,7 @@ public class RxPermissions {
     }
 
     public void setLogging(boolean logging) {
+        isDebug = logging;
         mRxPermissionsFragment.get().setLogging(logging);
     }
 
@@ -331,4 +373,15 @@ public class RxPermissions {
         V get();
     }
 
+    private static void log(String msg) {
+        if (isDebug) {
+            Log.d(TAG, msg);
+        }
+    }
+
+    private static void logW(String msg) {
+        if (isDebug) {
+            Log.w(TAG, msg);
+        }
+    }
 }
