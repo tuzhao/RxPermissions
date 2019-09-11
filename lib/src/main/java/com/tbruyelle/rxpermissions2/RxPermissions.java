@@ -215,6 +215,7 @@ public final class RxPermissions {
      */
     @SuppressWarnings({"WeakerAccess", "unused"})
     public Observable<Boolean> request(final String... permissions) {
+        log("request() permissions: " + permissions.length);
         return Observable.just(TRIGGER).compose(ensure(permissions));
     }
 
